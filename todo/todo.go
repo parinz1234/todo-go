@@ -2,14 +2,17 @@ package todo
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/parinz1234/todo-go/auth"
 	"gorm.io/gorm"
 )
 
 type Todo struct {
-	Title string `json:"text"`
+	Title string `json:"text" binding:"required"`
 	gorm.Model
+	// Model Validation, github.com/go-playground/validator/...
 }
 
 // Manual defined table name
@@ -26,6 +29,16 @@ func NewTodoHandler(db *gorm.DB) *TodoHandler {
 }
 
 func (t *TodoHandler) NewTask(c *gin.Context) {
+
+	s := c.Request.Header.Get("Authorization")
+	tokenString := strings.TrimPrefix(s, "Bearer ")
+
+	if err := auth.Protect(tokenString); err != nil {
+		// abort all chainning middleware
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
 	var todo Todo
 
 	// c.BindJSON(&todo) -> "must bind" -> got errors will return status 400
